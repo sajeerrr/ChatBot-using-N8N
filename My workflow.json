@@ -1,0 +1,155 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b996c50a-92e5-436f-9973-6a800d89bf87",
+      "name": "Webhook",
+      "webhookId": "04e4e88a-e9a7-4060-b759-c3962790fbb6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: \"llama-3.3-70b-versatile\",\n  messages: $json.messages\n} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0a1a36c0-aa3d-44f1-8b1b-b873414f08b2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ { reply: $json.reply } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "99c84d14-b01d-4aab-906d-2f611fda1e82",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!global.chat) {\n  global.chat = {};\n}\n\nconst userId = $json.body.userId || \"default\";\nconst message = $json.body.message;\n\n// init memory\nif (!global.chat[userId]) {\n  global.chat[userId] = [\n    { role: \"system\", content: \"You are a helpful chatbot. Always reply short, clear, and like a human conversation. Do not give technical explanations unless asked.\" }\n  ];\n}\n\n// store user message\nglobal.chat[userId].push({\n  role: \"user\",\n  content: message\n});\n\nreturn [\n  {\n    json: {\n      messages: global.chat[userId],\n      userId: userId\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "cfa2be17-ceca-4ac4-8e49-fc7270d65420",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// get reply from Groq safely\nconst reply = $json.choices?.[0]?.message?.content || \"No response\";\n\n// get userId directly (passed from previous node)\nconst userId = $json.userId || \"default\";\n\n// ensure memory exists\nif (!global.chat) {\n  global.chat = {};\n}\n\nif (!global.chat[userId]) {\n  global.chat[userId] = [];\n}\n\n// store assistant reply\nglobal.chat[userId].push({\n  role: \"assistant\",\n  content: reply\n});\n\nreturn [\n  {\n    json: {\n      reply: reply\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "3d659adc-755a-418b-9dea-cf2905acce45",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "964dfd8c-5770-48a9-b451-410ff36e7881",
+  "meta": {
+    "instanceId": "d62e0dabf3ec698163abf16d2f9fe2074b2cf4939fc4facfa5a4165223716394"
+  },
+  "id": "jYREanFFn5vydAfc",
+  "tags": []
+}
